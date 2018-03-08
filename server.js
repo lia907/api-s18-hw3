@@ -7,6 +7,7 @@ var authJwtController = require('./auth_jwt');
 db = require('./db')(); //global hack
 var jwt = require('jsonwebtoken');
 
+
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -14,6 +15,32 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
 
 var router = express.Router();
+
+router.route('/movies/viewall')
+    .get(authJwtController.isAuthenticated, function(req, res){
+        console.log(req.body);
+        var allMovies = db.findMovie();
+        if(allMovies != null){
+            res.status(200);
+            res.json(allMovies);
+        }
+        else{
+            res.status(400).send({success: false, msg: 'Movie Collection Not Found'});
+        }
+    });
+
+router.route('movies/viewone')
+    .get(authJwtController.isAuthenticated, function(req, res){
+        console.log(req.body);
+        var oneMovie = db.findMovie(req.body.title);
+        if(oneMovie != null){
+            res.status(200);
+            res.json(oneMovie);
+        }
+        else{
+            res.status(400).send({success: false, msg: 'Movie Not Found'});
+        }
+    });
 
 router.route('/post')
     .post(authController.isAuthenticated, function (req, res) {
@@ -40,22 +67,23 @@ router.route('/postjwt')
     );
 
 router.post('/signup', function(req, res) {
-    if (!req.body.username || !req.body.password) {
-        res.json({success: false, msg: 'Please pass username and password.'});
+    if (!req.body.username || !req.body.fullname || !req.body.password) {
+        res.json({success: false, msg: 'Please pass username, fullname, and password.'});
     } else {
         var newUser = {
             username: req.body.username,
+            fullname: req.body.fullname,
             password: req.body.password
         };
         // save the user
-        db.save(newUser); //no duplicate checking
+        db.saveUser(newUser);
         res.json({success: true, msg: 'Successful created new user.'});
     }
 });
 
 router.post('/signin', function(req, res) {
 
-        var user = db.findOne(req.body.username);
+        var user = db.findUser(req.body.username);
 
         if (!user) {
             res.status(401).send({success: false, msg: 'Authentication failed. User not found.'});
@@ -74,4 +102,4 @@ router.post('/signin', function(req, res) {
 });
 
 app.use('/', router);
-app.listen(process.env.PORT || 8080);
+app.listen(process.env.PORT || 5000);
